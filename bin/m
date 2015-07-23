@@ -1,0 +1,68 @@
+#!/bin/bash
+
+VERSION="0.1.0"
+DIR=/tmp/m-mon
+PIDS=$DIR/pids
+LOGS=$DIR/logs
+
+main() {
+
+  if [[ ! -d $DIR ]]; then
+    mkdir -p $DIR
+    mkdir -p $PIDS
+    mkdir -p $LOGS
+  fi
+
+  while test $# -ne 0; do
+    local app=$1
+    shift
+
+    if [[ "$app" == "list" ]]; then
+      ls -v $PIDS
+      exit
+    fi
+
+    local cmd=$@
+    case $cmd in
+      restart)
+        kill -s SIGQUIT $(cat $PIDS/$app.pid) 2> /dev/null
+        echo $app restarted
+        exit
+        ;;
+      status)
+        if [[ -f $PIDS/$app.pid ]]; then
+          echo $(mon --pidfile $PIDS/$app.pid --status)
+        else
+          printf "  \e[36m%10s\e[m : %s\n" "not running" $app
+        fi
+        exit
+        ;;
+      stop)
+        kill -s SIGQUIT $(cat $PIDS/$app.mon.pid) 2> /dev/null
+        rm $PIDS/$app.mon.pid
+        rm $PIDS/$app.pid
+        echo $app stopped
+        exit
+        ;;
+      tail)
+        tail -n 100 $LOGS/$app.log
+        exit
+        ;;
+      *)
+        local pidfile=$PIDS/$app.pid
+        if [[ -f $pidfile ]]; then
+          local pid=$(cat $pidfile)
+          kill -0 $pid 2> /dev/null
+          if [ $? -eq 0 ]; then
+            printf "  \e[36m%10s\e[m : %s\n" "running" $app
+            exit
+          fi
+        fi
+        mon -d -l $LOGS/$app.log -p $PIDS/$app.pid -m $PIDS/$app.mon.pid "$cmd"
+        echo $app started
+        exit
+        ;;
+    esac
+  done
+}
+main $@
