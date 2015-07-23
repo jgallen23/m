@@ -48,6 +48,10 @@ main() {
         tail -n 100 $LOGS/$app.log
         exit
         ;;
+      tailf)
+        tail -f $LOGS/$app.log
+        exit
+        ;;
       *)
         local pidfile=$PIDS/$app.pid
         if [[ -f $pidfile ]]; then
