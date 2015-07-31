@@ -4,6 +4,11 @@ VERSION="0.2.0"
 DIR=/tmp/m-mon
 PIDS=$DIR/pids
 LOGS=$DIR/logs
+SCRIPT=$0
+
+log() {
+  echo -e "  \e[33m$@\e[39m"
+}
 
 main() {
 
@@ -13,27 +18,46 @@ main() {
     mkdir -p $LOGS
   fi
 
+  if [ "$#" == 0 ]; then
+    exec $SCRIPT ps
+    exit
+  fi
   while test $# -ne 0; do
-    local app=$1
+    local cmd=$1
     shift
 
-    if [[ "$app" == "list" ]]; then
-      ls -v $PIDS
-      exit
-    fi
-
-    local cmd=$@
+    local app=$@
     case $cmd in
+      start)
+        local name=$1
+        shift
+        local exe=$@
+
+        local pidfile=$PIDS/$name.pid
+        if [[ -f $pidfile ]]; then
+          local pid=$(cat $pidfile)
+          kill -0 $pid 2> /dev/null
+          if [ $? -eq 0 ]; then
+            log "$app is already running"
+            exit
+          fi
+        fi
+        mon -d -l $LOGS/$name.log -p $PIDS/$name.pid -m $PIDS/$name.mon.pid "$exe"
+        log "$name started"
+        log "tailing logs (ctrl-c will keep app running)"
+        exec $SCRIPT tailf $name
+        exit
+        ;;
       restart)
         kill -s SIGQUIT $(cat $PIDS/$app.pid) 2> /dev/null
-        echo $app restarted
+        log "$app restarted"
         exit
         ;;
       status)
         if [[ -f $PIDS/$app.pid ]]; then
-          echo $(mon --pidfile $PIDS/$app.pid --status)
+          log $(mon --pidfile $PIDS/$app.pid --status)
         else
-          printf "  \e[36m%10s\e[m : %s\n" "not running" $app
+          log "$app not running"
         fi
         exit
         ;;
@@ -41,7 +65,7 @@ main() {
         kill -s SIGQUIT $(cat $PIDS/$app.mon.pid) 2> /dev/null
         rm $PIDS/$app.mon.pid
         rm $PIDS/$app.pid
-        echo $app stopped
+        log "$app stopped"
         exit
         ;;
       tail)
@@ -52,18 +76,9 @@ main() {
         tail -f $LOGS/$app.log
         exit
         ;;
-      *)
-        local pidfile=$PIDS/$app.pid
-        if [[ -f $pidfile ]]; then
-          local pid=$(cat $pidfile)
-          kill -0 $pid 2> /dev/null
-          if [ $? -eq 0 ]; then
-            printf "  \e[36m%10s\e[m : %s\n" "running" $app
-            exit
-          fi
-        fi
-        mon -d -l $LOGS/$app.log -p $PIDS/$app.pid -m $PIDS/$app.mon.pid "$cmd"
-        echo $app started
+      ps)
+        log "listing apps"
+        ls -v $PIDS
         exit
         ;;
     esac
