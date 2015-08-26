@@ -50,8 +50,10 @@ main() {
         exit
         ;;
       restart)
-        kill -s SIGQUIT $(cat $PIDS/$app.pid) 2> /dev/null
+        kill -s SIGTERM $(cat $PIDS/$app.pid) 2> /dev/null
         log "$app restarted"
+        log "tailing logs (ctrl-c will keep app running)"
+        exec $SCRIPT tailf $app
         exit
         ;;
       status)
