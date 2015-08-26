@@ -1,4 +1,10 @@
 
+0.4.0 / 2015-08-26
+==================
+
+  * tail logs after restart
+  * sleep before tailing logs when starting
+
 0.3.0 / 2015-07-30
 ==================
 
