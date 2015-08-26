@@ -44,6 +44,7 @@ main() {
         fi
         mon -d -l $LOGS/$name.log -p $PIDS/$name.pid -m $PIDS/$name.mon.pid "$exe"
         log "$name started"
+        sleep 1
         log "tailing logs (ctrl-c will keep app running)"
         exec $SCRIPT tailf $name
         exit
